@@ -25,6 +25,9 @@ private:
     std::vector<MoveHistory> moveHistory;
     int moveCounter;
 
+    int xWins;
+    int oWins;
+
     void switchPlayer();
     void removeOldestMove(char player);
 
@@ -35,6 +38,10 @@ public:
     char getWinner() const { return winner; }
     char getCurrentPlayer() const { return currentPlayer->getSymbol(); }
     bool isInfiniteMode() const { return infiniteMode; }
+
+    int getXWins() const { return xWins; }
+    int getOWins() const { return oWins; }
+    void resetScore();
 
     bool makeMove(int row, int col);
     void restart();

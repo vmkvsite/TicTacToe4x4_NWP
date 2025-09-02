@@ -2,7 +2,7 @@
 #include <algorithm>
 
 Game::Game() : player1('X'), player2('O'), currentPlayer(&player1),
-gameEnded(false), winner(' '), infiniteMode(false), moveCounter(0) {
+gameEnded(false), winner(' '), infiniteMode(false), moveCounter(0), xWins(0), oWins(0) {
 }
 
 bool Game::canPlaceAt(int row, int col) const {
@@ -35,6 +35,13 @@ bool Game::makeMove(int row, int col) {
         if (gameBoard.checkWin(currentPlayer->getSymbol())) {
             winner = currentPlayer->getSymbol();
             gameEnded = true;
+
+            if (winner == 'X') {
+                xWins++;
+            }
+            else if (winner == 'O') {
+                oWins++;
+            }
         }
         else if (gameBoard.isFull()) {
             winner = ' ';
@@ -130,4 +137,9 @@ void Game::removeOldestMove(char player) {
             gameBoard.makeMove(move.row, move.col, move.player);
         }
     }
+}
+
+void Game::resetScore() {
+    xWins = 0;
+    oWins = 0;
 }

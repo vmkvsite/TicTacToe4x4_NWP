@@ -19,6 +19,9 @@ void Renderer::render(HDC hdc, const RECT& clientRect) {
     else {
         drawWinDialog(hdc, clientRect);
     }
+
+    // Always draw the score
+    drawScore(hdc, clientRect);
 }
 
 void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
@@ -122,6 +125,34 @@ void Renderer::drawPlayerTurn(HDC hdc, const RECT& clientRect) const {
 
     RECT textRect = { x, y, x + textWidth, y + TURN_TEXT_HEIGHT };
     DrawText(hdc, turnText, -1, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    SelectObject(hdc, oldFont);
+    DeleteObject(font);
+}
+
+void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
+    SetTextColor(hdc, RGB(255, 255, 255));
+    SetBkMode(hdc, TRANSPARENT);
+
+    HFONT font = CreateFont(SCORE_FONT_SIZE, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial");
+    HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
+
+    // Draw X wins on the left
+    wchar_t xScoreText[30];
+    swprintf_s(xScoreText, L"X wins: %d", game->getXWins());
+
+    RECT xScoreRect = { SCORE_MARGIN, TURN_TEXT_Y, SCORE_MARGIN + SCORE_TEXT_WIDTH, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
+    DrawText(hdc, xScoreText, -1, &xScoreRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+    // Draw O wins on the right
+    wchar_t oScoreText[30];
+    swprintf_s(oScoreText, L"O wins: %d", game->getOWins());
+
+    RECT oScoreRect = { clientRect.right - SCORE_MARGIN - SCORE_TEXT_WIDTH, TURN_TEXT_Y,
+                       clientRect.right - SCORE_MARGIN, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
+    DrawText(hdc, oScoreText, -1, &oScoreRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
     DeleteObject(font);

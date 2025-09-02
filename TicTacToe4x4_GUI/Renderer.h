@@ -13,6 +13,7 @@ private:
     void drawBoard(HDC hdc, const RECT& clientRect) const;
     void drawSymbols(HDC hdc, const RECT& clientRect) const;
     void drawPlayerTurn(HDC hdc, const RECT& clientRect) const;
+    void drawScore(HDC hdc, const RECT& clientRect) const;
     void drawWinDialog(HDC hdc, const RECT& clientRect);
 
 public:

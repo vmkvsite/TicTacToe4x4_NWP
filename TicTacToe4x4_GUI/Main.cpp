@@ -127,6 +127,10 @@ namespace {
                 UpdateMenuCheckmark(hWnd);
                 InvalidateRect(hWnd, nullptr, TRUE);
                 break;
+            case IDM_GAME_RESET_SCORE:
+                game.resetScore();
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
             case IDM_GAME_EXIT:
                 DestroyWindow(hWnd);
                 break;
@@ -155,6 +159,7 @@ namespace {
         {
             if (game.isGameEnded())
             {
+ 
                 const int x = LOWORD(lParam);
                 const int y = HIWORD(lParam);
                 const RECT& winDialogRect = renderer.getWinDialogRect();
