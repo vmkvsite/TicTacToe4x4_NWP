@@ -164,7 +164,7 @@ void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
 
     RECT oScoreRect = { clientRect.right - SCORE_MARGIN - SCORE_TEXT_WIDTH, TURN_TEXT_Y,
                        clientRect.right - SCORE_MARGIN, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
-    DrawText(hdc, oScoreText, -1, &oScoreRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+    DrawText(hdc, oScoreText, -1, &oScoreRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
 }

@@ -1,5 +1,6 @@
 #include "Game.h"
 #include <algorithm>
+#include <numeric>
 
 Game::Game() : grid(BOARD_SIZE_INTERNAL, std::vector<char>(BOARD_SIZE_INTERNAL, ' ')),
 currentPlayerSymbol('X'), gameEnded(false), winner(' '),
@@ -15,7 +16,7 @@ bool Game::makeMove(int row, int col) {
 
     if (!canPlaceAt(row, col)) return false;
 
-     if (infiniteMode) {
+    if (infiniteMode) {
         int playerMoveCount = 0;
         for (const auto& move : moveHistory) {
             if (move.player == currentPlayerSymbol) playerMoveCount++;
