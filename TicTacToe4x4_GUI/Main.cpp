@@ -71,7 +71,7 @@ namespace {
         wcex.hInstance = hInstance;
         wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TICTACTOE4X4GUI));
         wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        wcex.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
+        wcex.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)); 
         wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_TICTACTOE4X4GUI);
         wcex.lpszClassName = szWindowClass;
         wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
@@ -88,6 +88,7 @@ namespace {
 
         if (!hWnd)
         {
+            MessageBoxW(nullptr, L"Failed to create main window", L"Error", MB_OK | MB_ICONERROR);
             return FALSE;
         }
 
@@ -142,6 +143,7 @@ namespace {
             }
         }
         break;
+
         case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -155,11 +157,11 @@ namespace {
             EndPaint(hWnd, &ps);
         }
         break;
+
         case WM_LBUTTONDOWN:
         {
             if (game.isGameEnded())
             {
- 
                 const int x = LOWORD(lParam);
                 const int y = HIWORD(lParam);
                 const RECT& winDialogRect = renderer.getWinDialogRect();
@@ -189,9 +191,11 @@ namespace {
             }
         }
         break;
+
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
+
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }

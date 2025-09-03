@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Board.h"
-#include "Player.h"
 #include "Constants.h"
 #include <vector>
+#include <climits>
 
 struct MoveHistory {
     int row, col;
@@ -14,9 +14,7 @@ struct MoveHistory {
 class Game {
 private:
     Board gameBoard;
-    Player player1;
-    Player player2;
-    Player* currentPlayer;
+    char currentPlayerSymbol;
 
     bool gameEnded;
     char winner;
@@ -30,20 +28,21 @@ private:
 
     void switchPlayer();
     void removeOldestMove(char player);
+    bool isOldestMove(int row, int col, char player) const;
 
 public:
     Game();
 
     bool isGameEnded() const { return gameEnded; }
     char getWinner() const { return winner; }
-    char getCurrentPlayer() const { return currentPlayer->getSymbol(); }
+    char getCurrentPlayer() const { return currentPlayerSymbol; }
     bool isInfiniteMode() const { return infiniteMode; }
 
     int getXWins() const { return xWins; }
     int getOWins() const { return oWins; }
     void resetScore();
 
-    bool makeMove(int row, int col);
+     bool makeMove(int row, int col);
     void restart();
     void toggleInfiniteMode();
 

@@ -1,8 +1,8 @@
 #include "Game.h"
 #include <algorithm>
 
-Game::Game() : player1('X'), player2('O'), currentPlayer(&player1),
-gameEnded(false), winner(' '), infiniteMode(false), moveCounter(0), xWins(0), oWins(0) {
+Game::Game() : currentPlayerSymbol('X'), gameEnded(false), winner(' '),
+infiniteMode(false), moveCounter(0), xWins(0), oWins(0) {
 }
 
 bool Game::canPlaceAt(int row, int col) const {
@@ -20,20 +20,20 @@ bool Game::makeMove(int row, int col) {
     if (infiniteMode) {
         int playerMoveCount = 0;
         for (const auto& move : moveHistory) {
-            if (move.player == currentPlayer->getSymbol())
+            if (move.player == currentPlayerSymbol)
                 playerMoveCount++;
         }
 
         if (playerMoveCount >= MAX_SYMBOLS_PER_PLAYER) {
-            removeOldestMove(currentPlayer->getSymbol());
+            removeOldestMove(currentPlayerSymbol);
         }
     }
 
-    if (gameBoard.makeMove(row, col, currentPlayer->getSymbol())) {
-        moveHistory.push_back({ row, col, currentPlayer->getSymbol(), moveCounter++ });
+    if (gameBoard.makeMove(row, col, currentPlayerSymbol)) {
+        moveHistory.push_back({ row, col, currentPlayerSymbol, moveCounter++ });
 
-        if (gameBoard.checkWin(currentPlayer->getSymbol())) {
-            winner = currentPlayer->getSymbol();
+        if (gameBoard.checkWin(currentPlayerSymbol)) {
+            winner = currentPlayerSymbol;
             gameEnded = true;
 
             if (winner == 'X') {
@@ -59,7 +59,7 @@ bool Game::makeMove(int row, int col) {
 
 void Game::restart() {
     gameBoard.reset();
-    currentPlayer = &player1;
+    currentPlayerSymbol = 'X';
     gameEnded = false;
     winner = ' ';
     moveHistory.clear();
@@ -95,13 +95,17 @@ bool Game::isSymbolExpiring(int row, int col) const {
     const char symbol = getSymbolAt(row, col);
     if (symbol == ' ') return false;
 
-    if (symbol != currentPlayer->getSymbol()) return false;
+    if (symbol != currentPlayerSymbol) return false;
 
+    return isOldestMove(row, col, symbol);
+}
+
+bool Game::isOldestMove(int row, int col, char player) const {
     int playerMoveCount = 0;
     int oldestMoveNumber = INT_MAX;
 
     for (const auto& move : moveHistory) {
-        if (move.player == symbol) {
+        if (move.player == player) {
             playerMoveCount++;
             if (move.moveNumber < oldestMoveNumber) {
                 oldestMoveNumber = move.moveNumber;
@@ -109,12 +113,14 @@ bool Game::isSymbolExpiring(int row, int col) const {
         }
     }
 
-    if (playerMoveCount >= MAX_SYMBOLS_PER_PLAYER) {
-        for (const auto& move : moveHistory) {
-            if (move.row == row && move.col == col &&
-                move.player == symbol && move.moveNumber == oldestMoveNumber) {
-                return true;
-            }
+    if (playerMoveCount < MAX_SYMBOLS_PER_PLAYER) {
+        return false;
+    }
+
+    for (const auto& move : moveHistory) {
+        if (move.row == row && move.col == col &&
+            move.player == player && move.moveNumber == oldestMoveNumber) {
+            return true;
         }
     }
 
@@ -122,7 +128,7 @@ bool Game::isSymbolExpiring(int row, int col) const {
 }
 
 void Game::switchPlayer() {
-    currentPlayer = (currentPlayer == &player1) ? &player2 : &player1;
+    currentPlayerSymbol = (currentPlayerSymbol == 'X') ? 'O' : 'X';
 }
 
 void Game::removeOldestMove(char player) {

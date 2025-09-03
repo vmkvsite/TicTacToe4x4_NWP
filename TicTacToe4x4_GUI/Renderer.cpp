@@ -1,14 +1,14 @@
 #include "Renderer.h"
 #include "Game.h"
 #include "Constants.h"
+#include "GDIHelper.h"
 #include <algorithm>
 
 Renderer::Renderer(Game* gameInstance) : game(gameInstance), winDialogRect{ 0 } {}
 
 void Renderer::render(HDC hdc, const RECT& clientRect) {
-    HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
+    HBRUSH blackBrush = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
     FillRect(hdc, const_cast<LPRECT>(&clientRect), blackBrush);
-    DeleteObject(blackBrush);
 
     drawBoard(hdc, clientRect);
     drawSymbols(hdc, clientRect);
@@ -20,18 +20,24 @@ void Renderer::render(HDC hdc, const RECT& clientRect) {
         drawWinDialog(hdc, clientRect);
     }
 
-    // Always draw the score
     drawScore(hdc, clientRect);
 }
 
-void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
-    const int boardSize = min(clientRect.right - BOARD_MARGIN, clientRect.bottom - BOARD_TOP_OFFSET - 20);
-    const int startX = (clientRect.right - boardSize) / 2;
-    const int startY = BOARD_TOP_OFFSET;
-    const int cellSize = boardSize / BOARD_SIZE;
+void Renderer::calculateBoardMetrics(const RECT& clientRect, int& boardSize, int& startX, int& startY, int& cellSize) const {
+    boardSize = (std::min)(static_cast<int>(clientRect.right - BOARD_MARGIN),
+        static_cast<int>(clientRect.bottom - BOARD_TOP_OFFSET - 20));
+    startX = (clientRect.right - boardSize) / 2;
+    startY = BOARD_TOP_OFFSET;
+    cellSize = boardSize / BOARD_SIZE;
+}
 
-    HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
-    HBRUSH grayBrush = CreateSolidBrush(RGB(128, 128, 128));
+void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
+    int boardSize, startX, startY, cellSize;
+    calculateBoardMetrics(clientRect, boardSize, startX, startY, cellSize);
+
+    GDIObject whiteBrush(CreateSolidBrush(BOARD_WHITE_COLOR));
+    GDIObject grayBrush(CreateSolidBrush(BOARD_GRAY_COLOR));
+    GDIObject blackPen(CreatePen(PS_SOLID, CELL_BORDER_WIDTH, BOARD_BLACK_COLOR));
 
     for (int row = 0; row < BOARD_SIZE; row++) {
         for (int col = 0; col < BOARD_SIZE; col++) {
@@ -44,7 +50,6 @@ void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
             HBRUSH currentBrush = ((row + col) % 2 == 0) ? whiteBrush : grayBrush;
             FillRect(hdc, &cellRect, currentBrush);
 
-            HPEN blackPen = CreatePen(PS_SOLID, CELL_BORDER_WIDTH, RGB(0, 0, 0));
             HPEN oldPen = static_cast<HPEN>(SelectObject(hdc, blackPen));
 
             MoveToEx(hdc, cellRect.left, cellRect.top, nullptr);
@@ -54,19 +59,20 @@ void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
             LineTo(hdc, cellRect.left, cellRect.top);
 
             SelectObject(hdc, oldPen);
-            DeleteObject(blackPen);
         }
     }
+}
 
-    DeleteObject(whiteBrush);
-    DeleteObject(grayBrush);
+COLORREF Renderer::getSymbolColor(char symbol, bool isExpiring) const {
+    if (isExpiring) {
+        return EXPIRING_COLOR;
+    }
+    return (symbol == 'X') ? PLAYER_X_COLOR : PLAYER_O_COLOR;
 }
 
 void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
-    const int boardSize = min(clientRect.right - BOARD_MARGIN, clientRect.bottom - BOARD_TOP_OFFSET - 20);
-    const int startX = (clientRect.right - boardSize) / 2;
-    const int startY = BOARD_TOP_OFFSET;
-    const int cellSize = boardSize / BOARD_SIZE;
+    int boardSize, startX, startY, cellSize;
+    calculateBoardMetrics(clientRect, boardSize, startX, startY, cellSize);
 
     for (int row = 0; row < BOARD_SIZE; row++) {
         for (int col = 0; col < BOARD_SIZE; col++) {
@@ -77,15 +83,10 @@ void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
                 const int centerY = startY + row * cellSize + cellSize / 2;
                 const int symbolSize = cellSize / SYMBOL_SIZE_RATIO;
 
-                COLORREF symbolColor;
-                if (game->isSymbolExpiring(row + 1, col + 1)) {
-                    symbolColor = RGB(128, 0, 128);
-                }
-                else {
-                    symbolColor = (symbol == 'X') ? RGB(255, 0, 0) : RGB(0, 0, 255);
-                }
+                const bool isExpiring = game->isSymbolExpiring(row + 1, col + 1);
+                const COLORREF symbolColor = getSymbolColor(symbol, isExpiring);
 
-                HPEN symbolPen = CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, symbolColor);
+                GDIObject symbolPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, symbolColor));
                 HPEN oldPen = static_cast<HPEN>(SelectObject(hdc, symbolPen));
 
                 if (symbol == 'X') {
@@ -100,19 +101,18 @@ void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
                 }
 
                 SelectObject(hdc, oldPen);
-                DeleteObject(symbolPen);
             }
         }
     }
 }
 
 void Renderer::drawPlayerTurn(HDC hdc, const RECT& clientRect) const {
-    SetTextColor(hdc, RGB(255, 255, 255));
+    SetTextColor(hdc, TEXT_WHITE_COLOR);
     SetBkMode(hdc, TRANSPARENT);
 
-    HFONT font = CreateFont(TURN_FONT_SIZE, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    GDIObject font(CreateFont(TURN_FONT_SIZE, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
     wchar_t turnText[50];
@@ -127,26 +127,23 @@ void Renderer::drawPlayerTurn(HDC hdc, const RECT& clientRect) const {
     DrawText(hdc, turnText, -1, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
-    DeleteObject(font);
 }
 
 void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
-    SetTextColor(hdc, RGB(255, 255, 255));
+    SetTextColor(hdc, TEXT_WHITE_COLOR);
     SetBkMode(hdc, TRANSPARENT);
 
-    HFONT font = CreateFont(SCORE_FONT_SIZE, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    GDIObject font(CreateFont(SCORE_FONT_SIZE, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
-    // Draw X wins on the left
     wchar_t xScoreText[30];
     swprintf_s(xScoreText, L"X wins: %d", game->getXWins());
 
     RECT xScoreRect = { SCORE_MARGIN, TURN_TEXT_Y, SCORE_MARGIN + SCORE_TEXT_WIDTH, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
     DrawText(hdc, xScoreText, -1, &xScoreRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-    // Draw O wins on the right
     wchar_t oScoreText[30];
     swprintf_s(oScoreText, L"O wins: %d", game->getOWins());
 
@@ -155,7 +152,6 @@ void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
     DrawText(hdc, oScoreText, -1, &oScoreRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
-    DeleteObject(font);
 }
 
 void Renderer::drawWinDialog(HDC hdc, const RECT& clientRect) {
@@ -164,22 +160,20 @@ void Renderer::drawWinDialog(HDC hdc, const RECT& clientRect) {
     winDialogRect.right = winDialogRect.left + WIN_DIALOG_WIDTH;
     winDialogRect.bottom = winDialogRect.top + WIN_DIALOG_HEIGHT;
 
-    HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
+    GDIObject whiteBrush(CreateSolidBrush(BOARD_WHITE_COLOR));
     FillRect(hdc, &winDialogRect, whiteBrush);
-    DeleteObject(whiteBrush);
 
-    HPEN blackPen = CreatePen(PS_SOLID, CELL_BORDER_WIDTH, RGB(0, 0, 0));
+    GDIObject blackPen(CreatePen(PS_SOLID, CELL_BORDER_WIDTH, BOARD_BLACK_COLOR));
     HPEN oldPen = static_cast<HPEN>(SelectObject(hdc, blackPen));
     Rectangle(hdc, winDialogRect.left, winDialogRect.top, winDialogRect.right, winDialogRect.bottom);
     SelectObject(hdc, oldPen);
-    DeleteObject(blackPen);
 
-    SetTextColor(hdc, RGB(0, 128, 0));
+    SetTextColor(hdc, TEXT_GREEN_COLOR);
     SetBkMode(hdc, TRANSPARENT);
 
-    HFONT font = CreateFont(WIN_FONT_SIZE, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    GDIObject font(CreateFont(WIN_FONT_SIZE, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
     wchar_t winText[50];
@@ -195,14 +189,11 @@ void Renderer::drawWinDialog(HDC hdc, const RECT& clientRect) {
     DrawText(hdc, winText, -1, &winDialogRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
-    DeleteObject(font);
 }
 
 void Renderer::getBoardCellFromPoint(int x, int y, const RECT& clientRect, int& row, int& col) const {
-    const int boardSize = min(clientRect.right - BOARD_MARGIN, clientRect.bottom - BOARD_TOP_OFFSET - 20);
-    const int startX = (clientRect.right - boardSize) / 2;
-    const int startY = BOARD_TOP_OFFSET;
-    const int cellSize = boardSize / BOARD_SIZE;
+    int boardSize, startX, startY, cellSize;
+    calculateBoardMetrics(clientRect, boardSize, startX, startY, cellSize);
 
     if (x >= startX && x < startX + boardSize && y >= startY && y < startY + boardSize) {
         col = (x - startX) / cellSize;
