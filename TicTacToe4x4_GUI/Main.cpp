@@ -1,4 +1,4 @@
-#include "framework.h"
+#include <windows.h>
 #include "resource.h"
 #include "Game.h"
 #include "Renderer.h"
@@ -14,7 +14,7 @@ namespace {
     Game game;
     Renderer renderer(&game);
 
-    ATOM MyRegisterClass(HINSTANCE hInstance);
+    ATOM RegisterWindowClass(HINSTANCE hInstance);
     BOOL InitInstance(HINSTANCE, int);
     LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
     INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
@@ -26,30 +26,23 @@ HINSTANCE GetAppInstance() {
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR lpCmdLine,
+    _In_opt_ HINSTANCE,
+    _In_ LPWSTR,
     _In_ int nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
-
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_TICTACTOE4X4GUI, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+    RegisterWindowClass(hInstance);
 
-    if (!InitInstance(hInstance, nCmdShow))
-    {
+    if (!InitInstance(hInstance, nCmdShow)) {
         return FALSE;
     }
 
     const HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TICTACTOE4X4GUI));
-
     MSG msg;
 
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
@@ -59,66 +52,53 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 }
 
 namespace {
-    ATOM MyRegisterClass(HINSTANCE hInstance)
-    {
-        WNDCLASSEXW wcex;
-
+    ATOM RegisterWindowClass(HINSTANCE hInstance) {
+        WNDCLASSEXW wcex{};
         wcex.cbSize = sizeof(WNDCLASSEX);
         wcex.style = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc = WndProc;
-        wcex.cbClsExtra = 0;
-        wcex.cbWndExtra = 0;
         wcex.hInstance = hInstance;
         wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TICTACTOE4X4GUI));
         wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        wcex.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)); 
+        wcex.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
         wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_TICTACTOE4X4GUI);
         wcex.lpszClassName = szWindowClass;
-        wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+        wcex.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
         return RegisterClassExW(&wcex);
     }
 
-    BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-    {
+    BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
         hInst = hInstance;
 
         HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT, 0, 600, 700, nullptr, nullptr, hInstance, nullptr);
 
-        if (!hWnd)
-        {
+        if (!hWnd) {
             MessageBoxW(nullptr, L"Failed to create main window", L"Error", MB_OK | MB_ICONERROR);
             return FALSE;
         }
 
         UpdateMenuCheckmark(hWnd);
-
         ShowWindow(hWnd, nCmdShow);
         UpdateWindow(hWnd);
 
         return TRUE;
     }
 
-    void UpdateMenuCheckmark(HWND hWnd)
-    {
+    void UpdateMenuCheckmark(HWND hWnd) {
         HMENU hMenu = GetMenu(hWnd);
-        if (hMenu)
-        {
+        if (hMenu) {
             const UINT flags = game.isInfiniteMode() ? MF_CHECKED : MF_UNCHECKED;
             CheckMenuItem(hMenu, IDM_GAME_INFINITE, MF_BYCOMMAND | flags);
         }
     }
 
-    LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-    {
-        switch (message)
-        {
-        case WM_COMMAND:
-        {
+    LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+        switch (message) {
+        case WM_COMMAND: {
             const int wmId = LOWORD(wParam);
-            switch (wmId)
-            {
+            switch (wmId) {
             case IDM_GAME_RESTART:
                 game.restart();
                 InvalidateRect(hWnd, nullptr, TRUE);
@@ -141,83 +121,61 @@ namespace {
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
+            break;
         }
-        break;
-
-        case WM_PAINT:
-        {
+        case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-
             RECT clientRect;
             GetClientRect(hWnd, &clientRect);
-
             renderer.render(hdc, clientRect);
-
             EndPaint(hWnd, &ps);
+            break;
         }
-        break;
-
-        case WM_LBUTTONDOWN:
-        {
-            if (game.isGameEnded())
-            {
+        case WM_LBUTTONDOWN: {
+            if (game.isGameEnded()) {
                 const int x = LOWORD(lParam);
                 const int y = HIWORD(lParam);
                 const RECT& winDialogRect = renderer.getWinDialogRect();
 
                 if (x >= winDialogRect.left && x <= winDialogRect.right &&
-                    y >= winDialogRect.top && y <= winDialogRect.bottom)
-                {
+                    y >= winDialogRect.top && y <= winDialogRect.bottom) {
                     game.restart();
                     InvalidateRect(hWnd, nullptr, TRUE);
                 }
             }
-            else
-            {
+            else {
                 RECT clientRect;
                 GetClientRect(hWnd, &clientRect);
-
                 int row, col;
                 renderer.getBoardCellFromPoint(LOWORD(lParam), HIWORD(lParam), clientRect, row, col);
 
-                if (row != -1 && col != -1)
-                {
-                    if (game.makeMove(row, col))
-                    {
-                        InvalidateRect(hWnd, nullptr, TRUE);
-                    }
+                if (row != -1 && col != -1 && game.makeMove(row, col)) {
+                    InvalidateRect(hWnd, nullptr, TRUE);
                 }
             }
+            break;
         }
-        break;
-
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
-
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
         return 0;
     }
 
-    INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-    {
-        UNREFERENCED_PARAMETER(lParam);
-        switch (message)
-        {
+    INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM) {
+        switch (message) {
         case WM_INITDIALOG:
-            return static_cast<INT_PTR>(TRUE);
-
+            return TRUE;
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-            {
+            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
                 EndDialog(hDlg, LOWORD(wParam));
-                return static_cast<INT_PTR>(TRUE);
+                return TRUE;
             }
             break;
         }
-        return static_cast<INT_PTR>(FALSE);
+        return FALSE;
     }
 }

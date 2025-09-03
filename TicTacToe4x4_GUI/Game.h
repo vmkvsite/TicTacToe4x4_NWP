@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Board.h"
 #include "Constants.h"
 #include <vector>
 #include <climits>
@@ -13,7 +12,8 @@ struct MoveHistory {
 
 class Game {
 private:
-    Board gameBoard;
+    static const int BOARD_SIZE_INTERNAL = 4;
+    std::vector<std::vector<char>> grid;
     char currentPlayerSymbol;
 
     bool gameEnded;
@@ -26,9 +26,13 @@ private:
     int xWins;
     int oWins;
 
+    bool isValidPosition(int row, int col) const;
+
     void switchPlayer();
     void removeOldestMove(char player);
     bool isOldestMove(int row, int col, char player) const;
+    bool checkWin(char player) const;
+    bool isBoardFull() const;
 
 public:
     Game();
@@ -42,7 +46,7 @@ public:
     int getOWins() const { return oWins; }
     void resetScore();
 
-     bool makeMove(int row, int col);
+    bool makeMove(int row, int col);
     void restart();
     void toggleInfiniteMode();
 
@@ -50,6 +54,4 @@ public:
     bool isPositionEmpty(int row, int col) const;
     bool isSymbolExpiring(int row, int col) const;
     bool canPlaceAt(int row, int col) const;
-
-    const std::vector<MoveHistory>& getMoveHistory() const { return moveHistory; }
 };

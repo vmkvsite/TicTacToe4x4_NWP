@@ -127,9 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Board.h" />
     <ClInclude Include="Constants.h" />
-    <ClInclude Include="framework.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GDIHelper.h" />
     <ClInclude Include="Renderer.h" />
@@ -137,7 +135,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Board.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Main.cpp" />

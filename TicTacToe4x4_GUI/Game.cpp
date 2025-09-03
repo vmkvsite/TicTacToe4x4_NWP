@@ -1,27 +1,24 @@
 #include "Game.h"
 #include <algorithm>
 
-Game::Game() : currentPlayerSymbol('X'), gameEnded(false), winner(' '),
+Game::Game() : grid(BOARD_SIZE_INTERNAL, std::vector<char>(BOARD_SIZE_INTERNAL, ' ')),
+currentPlayerSymbol('X'), gameEnded(false), winner(' '),
 infiniteMode(false), moveCounter(0), xWins(0), oWins(0) {
 }
 
-bool Game::canPlaceAt(int row, int col) const {
-    if (infiniteMode && isSymbolExpiring(row, col)) {
-        return false;
-    }
-    return isPositionEmpty(row, col);
+bool Game::isValidPosition(int row, int col) const {
+    return (row >= 1 && row <= BOARD_SIZE_INTERNAL && col >= 1 && col <= BOARD_SIZE_INTERNAL);
 }
 
 bool Game::makeMove(int row, int col) {
-    if (gameEnded) return false;
+    if (gameEnded || !isValidPosition(row, col)) return false;
 
     if (!canPlaceAt(row, col)) return false;
 
-    if (infiniteMode) {
+     if (infiniteMode) {
         int playerMoveCount = 0;
         for (const auto& move : moveHistory) {
-            if (move.player == currentPlayerSymbol)
-                playerMoveCount++;
+            if (move.player == currentPlayerSymbol) playerMoveCount++;
         }
 
         if (playerMoveCount >= MAX_SYMBOLS_PER_PLAYER) {
@@ -29,36 +26,79 @@ bool Game::makeMove(int row, int col) {
         }
     }
 
-    if (gameBoard.makeMove(row, col, currentPlayerSymbol)) {
-        moveHistory.push_back({ row, col, currentPlayerSymbol, moveCounter++ });
+    const int arrayRow = row - 1;
+    const int arrayCol = col - 1;
 
-        if (gameBoard.checkWin(currentPlayerSymbol)) {
-            winner = currentPlayerSymbol;
-            gameEnded = true;
+    if (grid[arrayRow][arrayCol] != ' ') return false;
 
-            if (winner == 'X') {
-                xWins++;
-            }
-            else if (winner == 'O') {
-                oWins++;
-            }
-        }
-        else if (gameBoard.isFull()) {
-            winner = ' ';
-            gameEnded = true;
-        }
-        else {
-            switchPlayer();
-        }
+    grid[arrayRow][arrayCol] = currentPlayerSymbol;
+    moveHistory.push_back({ row, col, currentPlayerSymbol, moveCounter++ });
 
-        return true;
+    if (checkWin(currentPlayerSymbol)) {
+        winner = currentPlayerSymbol;
+        gameEnded = true;
+
+        if (winner == 'X') xWins++;
+        else if (winner == 'O') oWins++;
+    }
+    else if (isBoardFull()) {
+        winner = ' ';
+        gameEnded = true;
+    }
+    else {
+        switchPlayer();
     }
 
-    return false;
+    return true;
+}
+
+bool Game::checkWin(char player) const {
+    for (int i = 0; i < BOARD_SIZE_INTERNAL; i++) {
+        if (std::all_of(grid[i].begin(), grid[i].end(),
+            [player](char cell) { return cell == player; })) {
+            return true;
+        }
+    }
+
+    for (int j = 0; j < BOARD_SIZE_INTERNAL; j++) {
+        if (std::all_of(grid.begin(), grid.end(),
+            [j, player](const std::vector<char>& row) { return row[j] == player; })) {
+            return true;
+        }
+    }
+
+    bool mainDiagWin = true;
+    for (int i = 0; i < BOARD_SIZE_INTERNAL; i++) {
+        if (grid[i][i] != player) {
+            mainDiagWin = false;
+            break;
+        }
+    }
+    if (mainDiagWin) return true;
+
+    bool antiDiagWin = true;
+    for (int i = 0; i < BOARD_SIZE_INTERNAL; i++) {
+        if (grid[i][BOARD_SIZE_INTERNAL - 1 - i] != player) {
+            antiDiagWin = false;
+            break;
+        }
+    }
+    return antiDiagWin;
+}
+
+bool Game::isBoardFull() const {
+    return std::all_of(grid.begin(), grid.end(),
+        [](const std::vector<char>& row) {
+            return std::all_of(row.begin(), row.end(),
+                [](char cell) { return cell != ' '; });
+        });
 }
 
 void Game::restart() {
-    gameBoard.reset();
+    for (auto& row : grid) {
+        std::fill(row.begin(), row.end(), ' ');
+    }
+
     currentPlayerSymbol = 'X';
     gameEnded = false;
     winner = ' ';
@@ -81,7 +121,8 @@ char Game::getSymbolAt(int row, int col) const {
         return ' ';
     }
     else {
-        return gameBoard.getSymbolAt(row, col);
+        if (!isValidPosition(row, col)) return ' ';
+        return grid[row - 1][col - 1];
     }
 }
 
@@ -89,13 +130,18 @@ bool Game::isPositionEmpty(int row, int col) const {
     return getSymbolAt(row, col) == ' ';
 }
 
+bool Game::canPlaceAt(int row, int col) const {
+    if (infiniteMode && isSymbolExpiring(row, col)) {
+        return false;
+    }
+    return isPositionEmpty(row, col);
+}
+
 bool Game::isSymbolExpiring(int row, int col) const {
     if (!infiniteMode) return false;
 
     const char symbol = getSymbolAt(row, col);
-    if (symbol == ' ') return false;
-
-    if (symbol != currentPlayerSymbol) return false;
+    if (symbol == ' ' || symbol != currentPlayerSymbol) return false;
 
     return isOldestMove(row, col, symbol);
 }
@@ -113,9 +159,7 @@ bool Game::isOldestMove(int row, int col, char player) const {
         }
     }
 
-    if (playerMoveCount < MAX_SYMBOLS_PER_PLAYER) {
-        return false;
-    }
+    if (playerMoveCount < MAX_SYMBOLS_PER_PLAYER) return false;
 
     for (const auto& move : moveHistory) {
         if (move.row == row && move.col == col &&
@@ -136,11 +180,13 @@ void Game::removeOldestMove(char player) {
         [player](const MoveHistory& move) { return move.player == player; });
 
     if (it != moveHistory.end()) {
-        gameBoard.reset();
+        for (auto& row : grid) {
+            std::fill(row.begin(), row.end(), ' ');
+        }
         moveHistory.erase(it);
 
         for (const auto& move : moveHistory) {
-            gameBoard.makeMove(move.row, move.col, move.player);
+            grid[move.row - 1][move.col - 1] = move.player;
         }
     }
 }
