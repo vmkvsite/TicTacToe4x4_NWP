@@ -99,13 +99,16 @@ namespace TicTacToeGUITests
         {
             Game game;
             game.toggleInfiniteMode();
-            game.makeMove(1, 1); game.makeMove(2, 1);
-            game.makeMove(1, 2); game.makeMove(2, 2);
-            game.makeMove(1, 3); game.makeMove(2, 3);
+
+            game.makeMove(1, 1); game.makeMove(1, 2);
+            game.makeMove(3, 1); game.makeMove(2, 2);
+            game.makeMove(2, 3); game.makeMove(3, 2);
             game.makeMove(1, 4); game.makeMove(2, 4);
-            game.makeMove(3, 1);
+
+            game.makeMove(4, 4);
+
             Assert::AreEqual(' ', game.getSymbolAt(1, 1));
-            Assert::AreEqual('X', game.getSymbolAt(3, 1));
+            Assert::AreEqual('X', game.getSymbolAt(4, 4));
         }
     };
 }
