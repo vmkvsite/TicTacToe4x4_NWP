@@ -2,7 +2,6 @@
 
 #include <windows.h>
 #include "Constants.h"
-#include "GDIHelper.h"
 
 class Game;
 

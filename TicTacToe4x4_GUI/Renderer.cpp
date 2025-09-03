@@ -1,8 +1,25 @@
 #include "Renderer.h"
 #include "Game.h"
 #include "Constants.h"
-#include "GDIHelper.h"
 #include <algorithm>
+
+namespace {
+    class GDIObject {
+    private:
+        HGDIOBJ obj;
+    public:
+        explicit GDIObject(HGDIOBJ o) : obj(o) {}
+        ~GDIObject() { if (obj) DeleteObject(obj); }
+
+        GDIObject(const GDIObject&) = delete;
+        GDIObject& operator=(const GDIObject&) = delete;
+
+        operator HGDIOBJ() const { return obj; }
+
+        template<typename T>
+        operator T() const { return static_cast<T>(obj); }
+    };
+}
 
 Renderer::Renderer(Game* gameInstance) : game(gameInstance), winDialogRect{ 0 } {}
 
@@ -64,9 +81,7 @@ void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
 }
 
 COLORREF Renderer::getSymbolColor(char symbol, bool isExpiring) const {
-    if (isExpiring) {
-        return EXPIRING_COLOR;
-    }
+    if (isExpiring) return EXPIRING_COLOR;
     return (symbol == 'X') ? PLAYER_X_COLOR : PLAYER_O_COLOR;
 }
 
@@ -198,7 +213,6 @@ void Renderer::getBoardCellFromPoint(int x, int y, const RECT& clientRect, int& 
     if (x >= startX && x < startX + boardSize && y >= startY && y < startY + boardSize) {
         col = (x - startX) / cellSize;
         row = (y - startY) / cellSize;
-
         row++;
         col++;
     }
