@@ -101,16 +101,16 @@ namespace {
             switch (wmId) {
             case IDM_GAME_RESTART:
                 game.restart();
-                InvalidateRect(hWnd, nullptr, TRUE);
+                InvalidateRect(hWnd, nullptr, FALSE);
                 break;
             case IDM_GAME_INFINITE:
                 game.toggleInfiniteMode();
                 UpdateMenuCheckmark(hWnd);
-                InvalidateRect(hWnd, nullptr, TRUE);
+                InvalidateRect(hWnd, nullptr, FALSE);
                 break;
             case IDM_GAME_RESET_SCORE:
                 game.resetScore();
-                InvalidateRect(hWnd, nullptr, TRUE);
+                InvalidateRect(hWnd, nullptr, FALSE);
                 break;
             case IDM_GAME_EXIT:
                 DestroyWindow(hWnd);
@@ -141,7 +141,7 @@ namespace {
                 if (x >= winDialogRect.left && x <= winDialogRect.right &&
                     y >= winDialogRect.top && y <= winDialogRect.bottom) {
                     game.restart();
-                    InvalidateRect(hWnd, nullptr, TRUE);
+                    InvalidateRect(hWnd, nullptr, FALSE);
                 }
             }
             else {
@@ -151,11 +151,13 @@ namespace {
                 renderer.getBoardCellFromPoint(LOWORD(lParam), HIWORD(lParam), clientRect, row, col);
 
                 if (row != -1 && col != -1 && game.makeMove(row, col)) {
-                    InvalidateRect(hWnd, nullptr, TRUE);
+                    InvalidateRect(hWnd, nullptr, FALSE);
                 }
             }
             break;
         }
+        case WM_ERASEBKGND:
+            return 1;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
