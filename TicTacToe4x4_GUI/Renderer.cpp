@@ -18,21 +18,12 @@ std::wstring LoadStringResource(UINT stringId) {
 }
 
 std::wstring format_wstring_runtime(const std::wstring& format_str, char playerSymbol) {
-    std::wstring result = format_str;
-    size_t pos = result.find(L"{}");
-    if (pos != std::wstring::npos) {
-        result.replace(pos, 2, 1, static_cast<wchar_t>(playerSymbol));
-    }
-    return result;
+    wchar_t wideSymbol = static_cast<wchar_t>(playerSymbol);
+    return std::vformat(format_str, std::make_wformat_args(wideSymbol));
 }
 
 std::wstring format_wstring_runtime(const std::wstring& format_str, int value) {
-    std::wstring result = format_str;
-    size_t pos = result.find(L"{}");
-    if (pos != std::wstring::npos) {
-        result.replace(pos, 2, std::to_wstring(value));
-    }
-    return result;
+    return std::vformat(format_str, std::make_wformat_args(value));
 }
 
 namespace {
@@ -240,8 +231,9 @@ void Renderer::drawWinDialog(HDC hdc, const RECT& clientRect) {
     std::wstring winText;
     const char winner = game->getWinner();
     if (winner != ' ') {
+        const wchar_t wideWinner = static_cast<wchar_t>(winner);
         std::wstring formatString = LoadStringResource(IDS_PLAYER_WINS);
-        winText = format_wstring_runtime(formatString, winner);
+        winText = std::vformat(formatString, std::make_wformat_args(wideWinner));
     }
     else {
         winText = LoadStringResource(IDS_DRAW);
