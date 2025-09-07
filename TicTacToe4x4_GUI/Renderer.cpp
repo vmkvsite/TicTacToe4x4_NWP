@@ -116,6 +116,7 @@ void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
 
     GDIObject xPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, PLAYER_X_COLOR));
     GDIObject oPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, PLAYER_O_COLOR));
+    GDIObject expiringPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, EXPIRING_COLOR));
     GDIObject nullBrush(GetStockObject(NULL_BRUSH));
 
     HPEN oldPen = static_cast<HPEN>(GetCurrentObject(hdc, OBJ_PEN));
@@ -132,16 +133,14 @@ void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
 
                 const bool isExpiring = game->isSymbolExpiring(row + 1, col + 1);
 
-                if (symbol == 'X') {
+                if (isExpiring) {
+                    SelectObject(hdc, expiringPen);
+                }
+                else if (symbol == 'X') {
                     SelectObject(hdc, xPen);
                 }
                 else {
                     SelectObject(hdc, oPen);
-                }
-
-                if (isExpiring) {
-                    GDIObject expiringPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, EXPIRING_COLOR));
-                    SelectObject(hdc, expiringPen);
                 }
 
                 if (symbol == 'X') {
