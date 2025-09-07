@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+HINSTANCE GetAppInstance();
+
 constexpr int IDM_GAME_RESTART = 201;
 constexpr int IDM_GAME_INFINITE = 202;
 constexpr int IDM_GAME_EXIT = 203;

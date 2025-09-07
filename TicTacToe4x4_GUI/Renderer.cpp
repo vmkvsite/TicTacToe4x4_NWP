@@ -1,8 +1,39 @@
 #include "Renderer.h"
 #include "Game.h"
 #include "Constants.h"
+#include "Resource.h"
 #include <algorithm>
+#include <string>
 #include <format>
+
+std::wstring LoadStringResource(UINT stringId) {
+    extern HINSTANCE GetAppInstance();
+
+    wchar_t buffer[256];
+    int length = LoadString(GetAppInstance(), stringId, buffer, sizeof(buffer) / sizeof(wchar_t));
+    if (length > 0) {
+        return std::wstring(buffer, length);
+    }
+    return L"";
+}
+
+std::wstring format_wstring_runtime(const std::wstring& format_str, char playerSymbol) {
+    std::wstring result = format_str;
+    size_t pos = result.find(L"{}");
+    if (pos != std::wstring::npos) {
+        result.replace(pos, 2, 1, static_cast<wchar_t>(playerSymbol));
+    }
+    return result;
+}
+
+std::wstring format_wstring_runtime(const std::wstring& format_str, int value) {
+    std::wstring result = format_str;
+    size_t pos = result.find(L"{}");
+    if (pos != std::wstring::npos) {
+        result.replace(pos, 2, std::to_wstring(value));
+    }
+    return result;
+}
 
 namespace {
     class GDIObject {
@@ -131,8 +162,10 @@ void Renderer::drawPlayerTurn(HDC hdc, const RECT& clientRect) const {
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
-    const wchar_t playerSymbol = (game->getCurrentPlayer() == 'X') ? L'X' : L'O';
-    std::wstring turnText = std::format(L"Player {}'s turn", playerSymbol);
+    const char playerSymbol = game->getCurrentPlayer();
+
+    std::wstring formatString = LoadStringResource(IDS_PLAYER_TURN);
+    std::wstring turnText = format_wstring_runtime(formatString, playerSymbol);
 
     const int textWidth = 200;
     const int x = (clientRect.right - textWidth) / 2;
@@ -153,12 +186,14 @@ void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
-    std::wstring xScoreText = std::format(L"X wins: {}", game->getXWins());
+    std::wstring xScoreFormat = LoadStringResource(IDS_X_WINS);
+    std::wstring xScoreText = format_wstring_runtime(xScoreFormat, game->getXWins());
 
     RECT xScoreRect = { SCORE_MARGIN, TURN_TEXT_Y, SCORE_MARGIN + SCORE_TEXT_WIDTH, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
     DrawText(hdc, xScoreText.c_str(), -1, &xScoreRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-    std::wstring oScoreText = std::format(L"O wins: {}", game->getOWins());
+    std::wstring oScoreFormat = LoadStringResource(IDS_O_WINS);
+    std::wstring oScoreText = format_wstring_runtime(oScoreFormat, game->getOWins());
 
     RECT oScoreRect = { clientRect.right - SCORE_MARGIN - SCORE_TEXT_WIDTH, TURN_TEXT_Y,
                        clientRect.right - SCORE_MARGIN, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
@@ -192,11 +227,11 @@ void Renderer::drawWinDialog(HDC hdc, const RECT& clientRect) {
     std::wstring winText;
     const char winner = game->getWinner();
     if (winner != ' ') {
-        const wchar_t winnerSymbol = (winner == 'X') ? L'X' : L'O';
-        winText = std::format(L"Player {} wins!", winnerSymbol);
+        std::wstring formatString = LoadStringResource(IDS_PLAYER_WINS);
+        winText = format_wstring_runtime(formatString, winner);
     }
     else {
-        winText = L"It's a draw!";
+        winText = LoadStringResource(IDS_DRAW);
     }
 
     DrawText(hdc, winText.c_str(), -1, &winDialogRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);

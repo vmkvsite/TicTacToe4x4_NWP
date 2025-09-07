@@ -8,8 +8,8 @@ namespace {
     const int MAX_LOADSTRING = 100;
 
     HINSTANCE hInst;
-    WCHAR szTitle[MAX_LOADSTRING];
-    WCHAR szWindowClass[MAX_LOADSTRING];
+    TCHAR szTitle[MAX_LOADSTRING];
+    TCHAR szWindowClass[MAX_LOADSTRING];
 
     Game game;
     Renderer renderer(&game);
@@ -30,8 +30,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR,
     _In_ int nCmdShow)
 {
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_TICTACTOE4X4GUI, szWindowClass, MAX_LOADSTRING);
+    LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+    LoadString(hInstance, IDC_TICTACTOE4X4GUI, szWindowClass, MAX_LOADSTRING);
     RegisterWindowClass(hInstance);
 
     if (!InitInstance(hInstance, nCmdShow)) {
@@ -53,7 +53,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 namespace {
     ATOM RegisterWindowClass(HINSTANCE hInstance) {
-        WNDCLASSEXW wcex{};
+        WNDCLASSEX wcex{};
         wcex.cbSize = sizeof(WNDCLASSEX);
         wcex.style = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc = WndProc;
@@ -61,21 +61,21 @@ namespace {
         wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TICTACTOE4X4GUI));
         wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wcex.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
-        wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_TICTACTOE4X4GUI);
+        wcex.lpszMenuName = MAKEINTRESOURCE(IDC_TICTACTOE4X4GUI);
         wcex.lpszClassName = szWindowClass;
         wcex.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
-        return RegisterClassExW(&wcex);
+        return RegisterClassEx(&wcex);
     }
 
     BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
         hInst = hInstance;
 
-        HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+        HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT, 0, 600, 700, nullptr, nullptr, hInstance, nullptr);
 
         if (!hWnd) {
-            MessageBoxW(nullptr, L"Failed to create main window", L"Error", MB_OK | MB_ICONERROR);
+            MessageBox(nullptr, TEXT("Failed to create main window"), TEXT("Error"), MB_OK | MB_ICONERROR);
             return FALSE;
         }
 

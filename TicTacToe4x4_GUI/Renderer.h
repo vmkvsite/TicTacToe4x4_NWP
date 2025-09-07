@@ -1,9 +1,12 @@
 #pragma once
 
 #include <windows.h>
+#include <string>
 #include "Constants.h"
 
 class Game;
+
+std::wstring LoadStringResource(UINT stringId);
 
 class Renderer {
 private:

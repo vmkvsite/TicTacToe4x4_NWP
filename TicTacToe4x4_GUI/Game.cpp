@@ -1,6 +1,7 @@
 #include "Game.h"
 #include <algorithm>
 #include <numeric>
+#include <ranges>
 
 Game::Game() : grid(BOARD_SIZE, std::vector<char>(BOARD_SIZE, ' ')),
 currentPlayerSymbol('X'), gameEnded(false), winner(' '),
@@ -54,16 +55,15 @@ bool Game::makeMove(int row, int col) {
 }
 
 bool Game::checkWin(char player) const {
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        if (std::all_of(grid[i].begin(), grid[i].end(),
-            [player](char cell) { return cell == player; })) {
-            return true;
-        }
-    }
+    if (std::ranges::any_of(grid, [player](const auto& row) {
+        return std::ranges::all_of(row, [player](const char c) { return c == player; });
+        }))
+        return true;
 
     for (int j = 0; j < BOARD_SIZE; j++) {
-        if (std::all_of(grid.begin(), grid.end(),
-            [j, player](const std::vector<char>& row) { return row[j] == player; })) {
+        if (std::ranges::all_of(grid, [j, player](const std::vector<char>& row) {
+            return row[j] == player;
+            })) {
             return true;
         }
     }
@@ -88,16 +88,14 @@ bool Game::checkWin(char player) const {
 }
 
 bool Game::isBoardFull() const {
-    return std::all_of(grid.begin(), grid.end(),
-        [](const std::vector<char>& row) {
-            return std::all_of(row.begin(), row.end(),
-                [](char cell) { return cell != ' '; });
+    return std::ranges::all_of(grid, [](const std::vector<char>& row) {
+        return std::ranges::all_of(row, [](char cell) { return cell != ' '; });
         });
 }
 
 void Game::restart() {
     for (auto& row : grid) {
-        std::fill(row.begin(), row.end(), ' ');
+        std::ranges::fill(row, ' ');
     }
 
     currentPlayerSymbol = 'X';
