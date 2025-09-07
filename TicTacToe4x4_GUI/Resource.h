@@ -10,6 +10,13 @@
 #define IDI_SMALL				108
 #define IDC_TICTACTOE4X4GUI			109
 #define IDC_MYICON				2
+
+#define IDS_PLAYER_TURN			200
+#define IDS_X_WINS				201
+#define	IDS_O_WINS				202
+#define IDS_PLAYER_WINS			203
+#define IDS_DRAW				204
+
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
 #endif

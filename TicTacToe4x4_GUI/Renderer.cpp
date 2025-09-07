@@ -2,6 +2,7 @@
 #include "Game.h"
 #include "Constants.h"
 #include <algorithm>
+#include <format>
 
 namespace {
     class GDIObject {
@@ -41,7 +42,7 @@ void Renderer::render(HDC hdc, const RECT& clientRect) {
 }
 
 void Renderer::calculateBoardMetrics(const RECT& clientRect, int& boardSize, int& startX, int& startY, int& cellSize) const {
-    boardSize = (std::min)(static_cast<int>(clientRect.right - BOARD_MARGIN),
+    boardSize = std::min(static_cast<int>(clientRect.right - BOARD_MARGIN),
         static_cast<int>(clientRect.bottom - BOARD_TOP_OFFSET - 20));
     startX = (clientRect.right - boardSize) / 2;
     startY = BOARD_TOP_OFFSET;
@@ -130,16 +131,15 @@ void Renderer::drawPlayerTurn(HDC hdc, const RECT& clientRect) const {
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
-    wchar_t turnText[50];
     const wchar_t playerSymbol = (game->getCurrentPlayer() == 'X') ? L'X' : L'O';
-    swprintf_s(turnText, L"Player %c's turn", playerSymbol);
+    std::wstring turnText = std::format(L"Player {}'s turn", playerSymbol);
 
     const int textWidth = 200;
     const int x = (clientRect.right - textWidth) / 2;
     const int y = TURN_TEXT_Y;
 
     RECT textRect = { x, y, x + textWidth, y + TURN_TEXT_HEIGHT };
-    DrawText(hdc, turnText, -1, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(hdc, turnText.c_str(), -1, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
 }
@@ -153,18 +153,16 @@ void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
-    wchar_t xScoreText[30];
-    swprintf_s(xScoreText, L"X wins: %d", game->getXWins());
+    std::wstring xScoreText = std::format(L"X wins: {}", game->getXWins());
 
     RECT xScoreRect = { SCORE_MARGIN, TURN_TEXT_Y, SCORE_MARGIN + SCORE_TEXT_WIDTH, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
-    DrawText(hdc, xScoreText, -1, &xScoreRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    DrawText(hdc, xScoreText.c_str(), -1, &xScoreRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-    wchar_t oScoreText[30];
-    swprintf_s(oScoreText, L"O wins: %d", game->getOWins());
+    std::wstring oScoreText = std::format(L"O wins: {}", game->getOWins());
 
     RECT oScoreRect = { clientRect.right - SCORE_MARGIN - SCORE_TEXT_WIDTH, TURN_TEXT_Y,
                        clientRect.right - SCORE_MARGIN, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
-    DrawText(hdc, oScoreText, -1, &oScoreRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(hdc, oScoreText.c_str(), -1, &oScoreRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
 }
@@ -191,17 +189,17 @@ void Renderer::drawWinDialog(HDC hdc, const RECT& clientRect) {
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Arial"));
     HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
 
-    wchar_t winText[50];
+    std::wstring winText;
     const char winner = game->getWinner();
     if (winner != ' ') {
         const wchar_t winnerSymbol = (winner == 'X') ? L'X' : L'O';
-        swprintf_s(winText, L"Player %c wins!", winnerSymbol);
+        winText = std::format(L"Player {} wins!", winnerSymbol);
     }
     else {
-        wcscpy_s(winText, L"It's a draw!");
+        winText = L"It's a draw!";
     }
 
-    DrawText(hdc, winText, -1, &winDialogRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawText(hdc, winText.c_str(), -1, &winDialogRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
 }
