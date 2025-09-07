@@ -32,13 +32,3 @@ jobs:
 
     - name: Run Unit Tests
       run: vstest.console.exe /Platform:x64 /Enablecodecoverage .\x64\Release\TicTacToe4x4_GUI_Test.dll
-
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: TicTacToe4x4-GUI-x64-Release
-        path: |
-          x64/Release/*.exe
-          x64/Release/*.dll
-          x64/Release/*.pdb
-        retention-days: 30

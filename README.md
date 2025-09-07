@@ -4,7 +4,7 @@
 ---------------------------------------------------------------
 ## How to play:
 
-- Run 'TicTacToe4x4.exe', no additional libraries are needed. "Restart" will restart the game, "Infinite" will make it so each player can only have 4 symbols at the board (whenever you try to play a 5th, the oldest symbol will disappear), "Reset score" will reset the score, "Exit" leaves the program. Clicking on a status message after a win/draw starts a new game.
+- Run 'TicTacToe4x4.exe', no additional libraries are needed. "Restart" will restart the game, "Infinite" will make it so each player can only have 4 symbols at the board (whenever you try to play a 5th, the oldest symbol will turn purple and disappear upon next move), "Reset score" will reset the score, "Exit" leaves the program. Clicking on a status message after a win/draw starts a new game.
 
 ---------------------------------------------------------------
 # Project structure is as follows:
