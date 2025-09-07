@@ -2,13 +2,13 @@
 #include <algorithm>
 #include <numeric>
 
-Game::Game() : grid(BOARD_SIZE_INTERNAL, std::vector<char>(BOARD_SIZE_INTERNAL, ' ')),
+Game::Game() : grid(BOARD_SIZE, std::vector<char>(BOARD_SIZE, ' ')),
 currentPlayerSymbol('X'), gameEnded(false), winner(' '),
 infiniteMode(false), moveCounter(0), xWins(0), oWins(0) {
 }
 
 bool Game::isValidPosition(int row, int col) const {
-    return (row >= 1 && row <= BOARD_SIZE_INTERNAL && col >= 1 && col <= BOARD_SIZE_INTERNAL);
+    return (row >= 1 && row <= BOARD_SIZE && col >= 1 && col <= BOARD_SIZE);
 }
 
 bool Game::makeMove(int row, int col) {
@@ -54,14 +54,14 @@ bool Game::makeMove(int row, int col) {
 }
 
 bool Game::checkWin(char player) const {
-    for (int i = 0; i < BOARD_SIZE_INTERNAL; i++) {
+    for (int i = 0; i < BOARD_SIZE; i++) {
         if (std::all_of(grid[i].begin(), grid[i].end(),
             [player](char cell) { return cell == player; })) {
             return true;
         }
     }
 
-    for (int j = 0; j < BOARD_SIZE_INTERNAL; j++) {
+    for (int j = 0; j < BOARD_SIZE; j++) {
         if (std::all_of(grid.begin(), grid.end(),
             [j, player](const std::vector<char>& row) { return row[j] == player; })) {
             return true;
@@ -69,7 +69,7 @@ bool Game::checkWin(char player) const {
     }
 
     bool mainDiagWin = true;
-    for (int i = 0; i < BOARD_SIZE_INTERNAL; i++) {
+    for (int i = 0; i < BOARD_SIZE; i++) {
         if (grid[i][i] != player) {
             mainDiagWin = false;
             break;
@@ -78,8 +78,8 @@ bool Game::checkWin(char player) const {
     if (mainDiagWin) return true;
 
     bool antiDiagWin = true;
-    for (int i = 0; i < BOARD_SIZE_INTERNAL; i++) {
-        if (grid[i][BOARD_SIZE_INTERNAL - 1 - i] != player) {
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        if (grid[i][BOARD_SIZE - 1 - i] != player) {
             antiDiagWin = false;
             break;
         }

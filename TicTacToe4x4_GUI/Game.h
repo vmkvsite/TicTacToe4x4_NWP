@@ -12,7 +12,6 @@ struct MoveHistory {
 
 class Game {
 private:
-    static const int BOARD_SIZE_INTERNAL = 4;
     std::vector<std::vector<char>> grid;
     char currentPlayerSymbol;
 
