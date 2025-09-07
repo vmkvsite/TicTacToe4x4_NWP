@@ -4,168 +4,152 @@
 #include "Renderer.h"
 #include "Constants.h"
 
-namespace {
-    const int MAX_LOADSTRING = 100;
-
-    HINSTANCE hInst;
-    TCHAR szTitle[MAX_LOADSTRING];
-    TCHAR szWindowClass[MAX_LOADSTRING];
-
-    Game game;
-    Renderer renderer(&game);
-
-    ATOM RegisterWindowClass(HINSTANCE hInstance);
-    BOOL InitInstance(HINSTANCE, int);
-    LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-    INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
-    void UpdateMenuCheckmark(HWND hWnd);
-}
-
-HINSTANCE GetAppInstance() {
-    return hInst;
-}
-
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE,
-    _In_ LPWSTR,
-    _In_ int nCmdShow)
-{
-    LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadString(hInstance, IDC_TICTACTOE4X4GUI, szWindowClass, MAX_LOADSTRING);
-    RegisterWindowClass(hInstance);
-
-    if (!InitInstance(hInstance, nCmdShow)) {
-        return FALSE;
-    }
-
-    const HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TICTACTOE4X4GUI));
-    MSG msg;
-
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
+class application {
+public:
+    int run() {
+        MSG msg;
+        while (GetMessage(&msg, nullptr, 0, 0)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+        return static_cast<int>(msg.wParam);
     }
+};
 
-    return static_cast<int>(msg.wParam);
-}
+class main_window {
+private:
+    HWND hw;
+    Game game;
+    Renderer renderer;
 
-namespace {
-    ATOM RegisterWindowClass(HINSTANCE hInstance) {
+public:
+    main_window() : hw(nullptr), renderer(&game) {}
+
+    operator HWND() const { return hw; }
+
+    bool create(HWND parent, DWORD style, LPCTSTR caption) {
         WNDCLASSEX wcex{};
         wcex.cbSize = sizeof(WNDCLASSEX);
         wcex.style = CS_HREDRAW | CS_VREDRAW;
-        wcex.lpfnWndProc = WndProc;
-        wcex.hInstance = hInstance;
-        wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TICTACTOE4X4GUI));
+        wcex.lpfnWndProc = proc;
+        wcex.hInstance = GetModuleHandle(nullptr);
+        wcex.hIcon = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_TICTACTOE4X4GUI));
         wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wcex.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
         wcex.lpszMenuName = MAKEINTRESOURCE(IDC_TICTACTOE4X4GUI);
-        wcex.lpszClassName = szWindowClass;
-        wcex.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
+        wcex.lpszClassName = L"TicTacToe4x4";
+        wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
-        return RegisterClassEx(&wcex);
+        RegisterClassEx(&wcex);
+
+        hw = CreateWindow(L"TicTacToe4x4", caption, style,
+            CW_USEDEFAULT, 0, 600, 700,
+            parent, LoadMenu(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDC_TICTACTOE4X4GUI)),
+            GetModuleHandle(nullptr), this);
+        return hw != nullptr;
     }
 
-    BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
-        hInst = hInstance;
-
-        HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT, 0, 600, 700, nullptr, nullptr, hInstance, nullptr);
-
-        if (!hWnd) {
-            MessageBox(nullptr, TEXT("Failed to create main window"), TEXT("Error"), MB_OK | MB_ICONERROR);
-            return FALSE;
+protected:
+    void on_command(int id) {
+        switch (id) {
+        case IDM_GAME_RESTART:
+            game.restart();
+            InvalidateRect(hw, nullptr, FALSE);
+            break;
+        case IDM_GAME_INFINITE:
+            game.toggleInfiniteMode();
+            update_menu_checkmark();
+            InvalidateRect(hw, nullptr, FALSE);
+            break;
+        case IDM_GAME_RESET_SCORE:
+            game.resetScore();
+            InvalidateRect(hw, nullptr, FALSE);
+            break;
+        case IDM_GAME_EXIT:
+            DestroyWindow(hw);
+            break;
+        case IDM_ABOUT:
+            DialogBox(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_ABOUTBOX), hw, about_proc);
+            break;
         }
-
-        UpdateMenuCheckmark(hWnd);
-        ShowWindow(hWnd, nCmdShow);
-        UpdateWindow(hWnd);
-
-        return TRUE;
     }
 
-    void UpdateMenuCheckmark(HWND hWnd) {
-        HMENU hMenu = GetMenu(hWnd);
+    void on_paint(HDC hdc) {
+        RECT clientRect;
+        GetClientRect(hw, &clientRect);
+        renderer.render(hdc, clientRect);
+    }
+
+    void on_left_button_down(int x, int y) {
+        if (game.isGameEnded()) {
+            const RECT& winDialogRect = renderer.getWinDialogRect();
+
+            if (x >= winDialogRect.left && x <= winDialogRect.right &&
+                y >= winDialogRect.top && y <= winDialogRect.bottom) {
+                game.restart();
+                InvalidateRect(hw, nullptr, FALSE);
+            }
+        }
+        else {
+            RECT clientRect;
+            GetClientRect(hw, &clientRect);
+            int row, col;
+            renderer.getBoardCellFromPoint(x, y, clientRect, row, col);
+
+            if (row != -1 && col != -1 && game.makeMove(row, col)) {
+                InvalidateRect(hw, nullptr, FALSE);
+            }
+        }
+    }
+
+    void on_destroy() {
+        PostQuitMessage(0);
+    }
+
+private:
+    void update_menu_checkmark() {
+        HMENU hMenu = GetMenu(hw);
         if (hMenu) {
             const UINT flags = game.isInfiniteMode() ? MF_CHECKED : MF_UNCHECKED;
             CheckMenuItem(hMenu, IDM_GAME_INFINITE, MF_BYCOMMAND | flags);
         }
     }
 
-    LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-        switch (message) {
-        case WM_COMMAND: {
-            const int wmId = LOWORD(wParam);
-            switch (wmId) {
-            case IDM_GAME_RESTART:
-                game.restart();
-                InvalidateRect(hWnd, nullptr, FALSE);
-                break;
-            case IDM_GAME_INFINITE:
-                game.toggleInfiniteMode();
-                UpdateMenuCheckmark(hWnd);
-                InvalidateRect(hWnd, nullptr, FALSE);
-                break;
-            case IDM_GAME_RESET_SCORE:
-                game.resetScore();
-                InvalidateRect(hWnd, nullptr, FALSE);
-                break;
-            case IDM_GAME_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-            break;
+    static LRESULT CALLBACK proc(HWND hw, UINT msg, WPARAM wp, LPARAM lp) {
+        if (msg == WM_CREATE) {
+            CREATESTRUCT* pcs = reinterpret_cast<CREATESTRUCT*>(lp);
+            main_window* pw = reinterpret_cast<main_window*>(pcs->lpCreateParams);
+            SetWindowLongPtr(hw, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pw));
+            pw->hw = hw;
+            pw->update_menu_checkmark();
+            return 0;
         }
-        case WM_PAINT: {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            RECT clientRect;
-            GetClientRect(hWnd, &clientRect);
-            renderer.render(hdc, clientRect);
-            EndPaint(hWnd, &ps);
-            break;
-        }
-        case WM_LBUTTONDOWN: {
-            if (game.isGameEnded()) {
-                const int x = LOWORD(lParam);
-                const int y = HIWORD(lParam);
-                const RECT& winDialogRect = renderer.getWinDialogRect();
 
-                if (x >= winDialogRect.left && x <= winDialogRect.right &&
-                    y >= winDialogRect.top && y <= winDialogRect.bottom) {
-                    game.restart();
-                    InvalidateRect(hWnd, nullptr, FALSE);
-                }
+        main_window* pw = reinterpret_cast<main_window*>(GetWindowLongPtr(hw, GWLP_USERDATA));
+        if (pw) {
+            switch (msg) {
+            case WM_COMMAND:
+                pw->on_command(LOWORD(wp));
+                return 0;
+            case WM_DESTROY:
+                pw->on_destroy();
+                return 0;
+            case WM_LBUTTONDOWN:
+                pw->on_left_button_down(LOWORD(lp), HIWORD(lp));
+                return 0;
+            case WM_PAINT: {
+                PAINTSTRUCT ps;
+                HDC hdc = BeginPaint(hw, &ps);
+                pw->on_paint(hdc);
+                EndPaint(hw, &ps);
+                return 0;
             }
-            else {
-                RECT clientRect;
-                GetClientRect(hWnd, &clientRect);
-                int row, col;
-                renderer.getBoardCellFromPoint(LOWORD(lParam), HIWORD(lParam), clientRect, row, col);
-
-                if (row != -1 && col != -1 && game.makeMove(row, col)) {
-                    InvalidateRect(hWnd, nullptr, FALSE);
-                }
             }
-            break;
         }
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            break;
-        default:
-            return DefWindowProc(hWnd, message, wParam, lParam);
-        }
-        return 0;
+        return DefWindowProc(hw, msg, wp, lp);
     }
 
-    INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM) {
+    static INT_PTR CALLBACK about_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM) {
         switch (message) {
         case WM_INITDIALOG:
             return TRUE;
@@ -178,4 +162,22 @@ namespace {
         }
         return FALSE;
     }
+};
+
+HINSTANCE GetAppInstance() {
+    return GetModuleHandle(nullptr);
+}
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
+    application app;
+    main_window w;
+
+    TCHAR title[100];
+    LoadString(hInstance, IDS_APP_TITLE, title, 100);
+
+    w.create(0, WS_OVERLAPPEDWINDOW, title);
+    ShowWindow(w, nCmdShow);
+    UpdateWindow(w);
+
+    return app.run();
 }
