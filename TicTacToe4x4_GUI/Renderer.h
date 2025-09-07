@@ -20,7 +20,6 @@ private:
     void drawWinDialog(HDC hdc, const RECT& clientRect);
 
     void calculateBoardMetrics(const RECT& clientRect, int& boardSize, int& startX, int& startY, int& cellSize) const;
-    COLORREF getSymbolColor(char symbol, bool isExpiring) const;
 
 public:
     explicit Renderer(Game* gameInstance);

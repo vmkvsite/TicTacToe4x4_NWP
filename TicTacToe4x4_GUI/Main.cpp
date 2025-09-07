@@ -156,8 +156,6 @@ namespace {
             }
             break;
         }
-        case WM_ERASEBKGND:
-            return 1;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;

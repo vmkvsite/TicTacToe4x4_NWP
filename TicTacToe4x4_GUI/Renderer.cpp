@@ -56,8 +56,6 @@ namespace {
 Renderer::Renderer(Game* gameInstance) : game(gameInstance), winDialogRect{ 0 } {}
 
 void Renderer::render(HDC hdc, const RECT& clientRect) {
-    HBRUSH blackBrush = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
-    FillRect(hdc, const_cast<LPRECT>(&clientRect), blackBrush);
 
     drawBoard(hdc, clientRect);
     drawSymbols(hdc, clientRect);
@@ -88,6 +86,8 @@ void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
     GDIObject grayBrush(CreateSolidBrush(BOARD_GRAY_COLOR));
     GDIObject blackPen(CreatePen(PS_SOLID, CELL_BORDER_WIDTH, BOARD_BLACK_COLOR));
 
+    HPEN oldPen = static_cast<HPEN>(SelectObject(hdc, blackPen));
+
     for (int row = 0; row < BOARD_SIZE; row++) {
         for (int col = 0; col < BOARD_SIZE; col++) {
             RECT cellRect;
@@ -99,27 +99,27 @@ void Renderer::drawBoard(HDC hdc, const RECT& clientRect) const {
             HBRUSH currentBrush = ((row + col) % 2 == 0) ? whiteBrush : grayBrush;
             FillRect(hdc, &cellRect, currentBrush);
 
-            HPEN oldPen = static_cast<HPEN>(SelectObject(hdc, blackPen));
-
             MoveToEx(hdc, cellRect.left, cellRect.top, nullptr);
             LineTo(hdc, cellRect.right, cellRect.top);
             LineTo(hdc, cellRect.right, cellRect.bottom);
             LineTo(hdc, cellRect.left, cellRect.bottom);
             LineTo(hdc, cellRect.left, cellRect.top);
-
-            SelectObject(hdc, oldPen);
         }
     }
-}
 
-COLORREF Renderer::getSymbolColor(char symbol, bool isExpiring) const {
-    if (isExpiring) return EXPIRING_COLOR;
-    return (symbol == 'X') ? PLAYER_X_COLOR : PLAYER_O_COLOR;
+    SelectObject(hdc, oldPen);
 }
 
 void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
     int boardSize, startX, startY, cellSize;
     calculateBoardMetrics(clientRect, boardSize, startX, startY, cellSize);
+
+    GDIObject xPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, PLAYER_X_COLOR));
+    GDIObject oPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, PLAYER_O_COLOR));
+    GDIObject nullBrush(GetStockObject(NULL_BRUSH));
+
+    HPEN oldPen = static_cast<HPEN>(GetCurrentObject(hdc, OBJ_PEN));
+    HBRUSH oldBrush = static_cast<HBRUSH>(SelectObject(hdc, nullBrush));
 
     for (int row = 0; row < BOARD_SIZE; row++) {
         for (int col = 0; col < BOARD_SIZE; col++) {
@@ -131,10 +131,18 @@ void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
                 const int symbolSize = cellSize / SYMBOL_SIZE_RATIO;
 
                 const bool isExpiring = game->isSymbolExpiring(row + 1, col + 1);
-                const COLORREF symbolColor = getSymbolColor(symbol, isExpiring);
 
-                GDIObject symbolPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, symbolColor));
-                HPEN oldPen = static_cast<HPEN>(SelectObject(hdc, symbolPen));
+                if (symbol == 'X') {
+                    SelectObject(hdc, xPen);
+                }
+                else {
+                    SelectObject(hdc, oPen);
+                }
+
+                if (isExpiring) {
+                    GDIObject expiringPen(CreatePen(PS_SOLID, SYMBOL_PEN_WIDTH, EXPIRING_COLOR));
+                    SelectObject(hdc, expiringPen);
+                }
 
                 if (symbol == 'X') {
                     MoveToEx(hdc, centerX - symbolSize, centerY - symbolSize, nullptr);
@@ -143,17 +151,22 @@ void Renderer::drawSymbols(HDC hdc, const RECT& clientRect) const {
                     LineTo(hdc, centerX - symbolSize, centerY + symbolSize);
                 }
                 else if (symbol == 'O') {
-                    Arc(hdc, centerX - symbolSize, centerY - symbolSize,
-                        centerX + symbolSize, centerY + symbolSize, 0, 0, 0, 0);
+                    Ellipse(hdc, centerX - symbolSize, centerY - symbolSize,
+                        centerX + symbolSize, centerY + symbolSize);
                 }
-
-                SelectObject(hdc, oldPen);
             }
         }
     }
+
+    SelectObject(hdc, oldPen);
+    SelectObject(hdc, oldBrush);
 }
 
 void Renderer::drawPlayerTurn(HDC hdc, const RECT& clientRect) const {
+    RECT textRect = { 0, TURN_TEXT_Y, clientRect.right, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
+    HBRUSH blackBrush = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
+    FillRect(hdc, &textRect, blackBrush);
+
     SetTextColor(hdc, TEXT_WHITE_COLOR);
     SetBkMode(hdc, TRANSPARENT);
 
@@ -167,17 +180,21 @@ void Renderer::drawPlayerTurn(HDC hdc, const RECT& clientRect) const {
     std::wstring formatString = LoadStringResource(IDS_PLAYER_TURN);
     std::wstring turnText = format_wstring_runtime(formatString, playerSymbol);
 
-    const int textWidth = 200;
-    const int x = (clientRect.right - textWidth) / 2;
-    const int y = TURN_TEXT_Y;
-
-    RECT textRect = { x, y, x + textWidth, y + TURN_TEXT_HEIGHT };
     DrawText(hdc, turnText.c_str(), -1, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
 }
 
 void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
+    HBRUSH blackBrush = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
+
+    RECT xScoreRect = { SCORE_MARGIN, TURN_TEXT_Y, SCORE_MARGIN + SCORE_TEXT_WIDTH, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
+    FillRect(hdc, &xScoreRect, blackBrush);
+
+    RECT oScoreRect = { clientRect.right - SCORE_MARGIN - SCORE_TEXT_WIDTH, TURN_TEXT_Y,
+                       clientRect.right - SCORE_MARGIN, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
+    FillRect(hdc, &oScoreRect, blackBrush);
+
     SetTextColor(hdc, TEXT_WHITE_COLOR);
     SetBkMode(hdc, TRANSPARENT);
 
@@ -189,14 +206,11 @@ void Renderer::drawScore(HDC hdc, const RECT& clientRect) const {
     std::wstring xScoreFormat = LoadStringResource(IDS_X_WINS);
     std::wstring xScoreText = format_wstring_runtime(xScoreFormat, game->getXWins());
 
-    RECT xScoreRect = { SCORE_MARGIN, TURN_TEXT_Y, SCORE_MARGIN + SCORE_TEXT_WIDTH, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
     DrawText(hdc, xScoreText.c_str(), -1, &xScoreRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
     std::wstring oScoreFormat = LoadStringResource(IDS_O_WINS);
     std::wstring oScoreText = format_wstring_runtime(oScoreFormat, game->getOWins());
 
-    RECT oScoreRect = { clientRect.right - SCORE_MARGIN - SCORE_TEXT_WIDTH, TURN_TEXT_Y,
-                       clientRect.right - SCORE_MARGIN, TURN_TEXT_Y + TURN_TEXT_HEIGHT };
     DrawText(hdc, oScoreText.c_str(), -1, &oScoreRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     SelectObject(hdc, oldFont);
